@@ -9,11 +9,8 @@
     body { margin: 0; background-color: #f4f6f8; display: flex; height: 100vh; overflow: hidden; }
     
     /* 側邊欄 Sidebar */
-    .sidebar { width: 320px; background: #2c3e50; color: #ecf0f1; display: flex; flex-direction: column; }
+    .sidebar { width: 320px; background: #2c3e50; color: #ecf0f1; display: flex; flex-direction: column; justify-content: space-between; }
     .sidebar-header { padding: 15px; background: #1a252f; text-align: center; font-weight: bold; font-size: 1.1rem; }
-    .nav-tabs { display: flex; background: #34495e; }
-    .nav-tab { flex: 1; padding: 10px; text-align: center; cursor: pointer; font-size: 0.9rem; }
-    .nav-tab.active { background: #2980b9; font-weight: bold; }
     .tree-container { flex: 1; overflow-y: auto; padding: 10px; }
     .volume-title { font-weight: bold; color: #f1c40f; margin: 12px 0 6px 5px; font-size: 1rem; border-bottom: 1px solid #455a64; padding-bottom: 4px; }
     .song-item { padding: 8px 12px; margin: 4px 0; background: #34495e; border-radius: 6px; cursor: pointer; font-size: 0.9rem; }
@@ -22,6 +19,11 @@
     .page-list { margin-left: 12px; margin-top: 6px; padding-left: 8px; border-left: 2px solid #546e7a; }
     .page-item { padding: 5px 8px; font-size: 0.85rem; color: #bdc3c7; cursor: pointer; border-radius: 4px; margin: 2px 0; }
     .page-item:hover, .page-item.active { color: #fff; background: #16a085; font-weight: bold; }
+
+    /* 底部純圖示按鈕 */
+    .sidebar-footer { padding: 12px; background: #1a252f; display: flex; justify-content: flex-end; align-items: center; }
+    .icon-btn { background: transparent; border: none; font-size: 1.3rem; cursor: pointer; color: #95a5a6; padding: 5px 10px; border-radius: 6px; transition: 0.2s; }
+    .icon-btn:hover { color: #fff; background: #34495e; }
 
     /* 主內容區 Main Content */
     .main-content { flex: 1; display: flex; flex-direction: column; background: #fff; overflow-y: auto; }
@@ -58,15 +60,18 @@
 </head>
 <body>
 
-  <!-- 側邊欄：前/後台切換與章節選擇 -->
+  <!-- 側邊欄 -->
   <div class="sidebar">
-    <div class="sidebar-header">童謠發音學習與管理系統</div>
-    <div class="nav-tabs">
-      <div class="nav-tab active" id="tab-front" onclick="switchMode('front')">📖 前台學習</div>
-      <div class="nav-tab" id="tab-admin" onclick="switchMode('admin')">🔒 後台管理</div>
+    <div>
+      <div class="sidebar-header" onclick="switchMode('front')" style="cursor:pointer;">童謠發音學習與管理系統</div>
+      <div class="tree-container" id="tree-container">
+        <!-- 動態載入冊別與童謠 -->
+      </div>
     </div>
-    <div class="tree-container" id="tree-container">
-      <!-- 動態載入冊別與童謠 -->
+
+    <!-- 最下方純圖示按鈕 -->
+    <div class="sidebar-footer">
+      <button class="icon-btn" onclick="switchMode('admin')" title="後台管理">⚙️</button>
     </div>
   </div>
 
@@ -103,7 +108,10 @@
 
       <!-- 後台管理視圖 -->
       <div id="admin-view" class="admin-panel" style="display:none;">
-        <h3 style="margin-top:0; color:#2c3e50; border-bottom:2px solid #eee; padding-bottom:10px;">上傳 / 新增童謠內容</h3>
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #eee; padding-bottom:10px; margin-bottom:20px;">
+          <h3 style="margin:0; color:#2c3e50;">上傳 / 新增童謠內容</h3>
+          <button onclick="switchMode('front')" style="padding:6px 12px; background:#95a5a6; color:white; border:none; border-radius:4px; cursor:pointer;">返回前台</button>
+        </div>
         
         <div class="form-group">
           <label>選擇冊別：</label>
@@ -167,9 +175,8 @@
 
   <script>
     let db;
-    let currentMode = 'front';
-    let isAdminUnlocked = false; // 管理員驗證狀態
-    const ADMIN_PASSWORD = "1234"; // 管理員預設密碼 (可自訂)
+    let isAdminUnlocked = false;
+    const ADMIN_PASSWORD = "1234"; // 管理員密碼
 
     let currentActiveData = null;
     let activeAudioObj = null;
@@ -198,29 +205,27 @@
       loadSidebarTree();
     };
 
-    // 切換模式（含密碼驗證）
+    // 切換模式
     function switchMode(mode) {
-      if (mode === 'admin' && !isAdminUnlocked) {
-        const inputPwd = prompt("🔒 請輸入管理員密碼以進入後台：");
-        if (inputPwd === ADMIN_PASSWORD) {
-          isAdminUnlocked = true;
-          alert("解鎖成功！已進入管理後台。");
-        } else if (inputPwd !== null) {
-          alert("密碼錯誤，無法進入後台！");
-          return;
-        } else {
-          return; // 使用者點擊取消
+      if (mode === 'admin') {
+        if (!isAdminUnlocked) {
+          const inputPwd = prompt("🔒 請輸入管理員密碼：");
+          if (inputPwd === ADMIN_PASSWORD) {
+            isAdminUnlocked = true;
+          } else if (inputPwd !== null) {
+            alert("密碼錯誤！");
+            return;
+          } else {
+            return;
+          }
         }
       }
 
-      currentMode = mode;
-      document.getElementById('tab-front').classList.toggle('active', mode === 'front');
-      document.getElementById('tab-admin').classList.toggle('active', mode === 'admin');
       document.getElementById('front-view').style.display = mode === 'front' ? 'block' : 'none';
       document.getElementById('admin-view').style.display = mode === 'admin' ? 'block' : 'none';
     }
 
-    // 讀取並渲染側邊欄目錄
+    // 讀取並渲染目錄
     function loadSidebarTree() {
       const tx = db.transaction("rhymes", "readonly");
       const store = tx.objectStore("rhymes");
@@ -278,7 +283,6 @@
       };
     }
 
-    // 重置所有按鈕狀態
     function resetAllButtons() {
       for (let type in originalBtnTexts) {
         const btn = document.getElementById(`btn-${type}`);
@@ -289,7 +293,6 @@
       }
     }
 
-    // 選擇特定頁數展示
     function selectPage(item) {
       if (activeAudioObj) {
         activeAudioObj.pause();
@@ -317,7 +320,6 @@
       document.getElementById('audio-section').style.display = 'block';
     }
 
-    // 播放 / 暫停 音檔控制
     function playAudio(type, btnEl) {
       if (!currentActiveData) return;
 
@@ -362,7 +364,6 @@
       };
     }
 
-    // 後台儲存資料
     async function saveData() {
       const volume = document.getElementById('adm-volume').value;
       const songName = document.getElementById('adm-song-name').value.trim();
@@ -375,11 +376,9 @@
       }
 
       const imgFile = document.getElementById('adm-img-file').files[0];
-      
       const drFile = document.getElementById('adm-audio-dr').files[0];
       const chienFile = document.getElementById('adm-audio-chien').files[0];
       const zhFile = document.getElementById('adm-audio-zh').files[0];
-
       const fullDrFile = document.getElementById('adm-full-dr').files[0];
       const fullChienFile = document.getElementById('adm-full-chien').files[0];
       const fullZhFile = document.getElementById('adm-full-zh').files[0];
