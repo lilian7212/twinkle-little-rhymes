@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>童謠發音學習與管理系統</title>
+  <style>
+    * { box-sizing: border-box; font-family: "PingFang TC", "Microsoft JhengHei", sans-serif; }
+    body { margin: 0; background-color: #f4f6f8; display: flex; height: 100vh; overflow: hidden; }
+    
+    /* 側邊欄 Sidebar */
+    .sidebar { width: 320px; background: #2c3e50; color: #ecf0f1; display: flex; flex-direction: column; }
+    .sidebar-header { padding: 15px; background: #1a252f; text-align: center; font-weight: bold; font-size: 1.1rem; }
+    .nav-tabs { display: flex; background: #34495e; }
+    .nav-tab { flex: 1; padding: 10px; text-align: center; cursor: pointer; font-size: 0.9rem; }
+    .nav-tab.active { background: #2980b9; font-weight: bold; }
+    .tree-container { flex: 1; overflow-y: auto; padding: 10px; }
+    .volume-title { font-weight: bold; color: #f1c40f; margin: 12px 0 6px 5px; font-size: 1rem; border-bottom: 1px solid #455a64; padding-bottom: 4px; }
+    .song-item { padding: 8px 12px; margin: 4px 0; background: #34495e; border-radius: 6px; cursor: pointer; font-size: 0.9rem; }
+    .song-item:hover, .song-item.active { background: #2980b9; }
+    .song-header { font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
+    .page-list { margin-left: 12px; margin-top: 6px; padding-left: 8px; border-left: 2px solid #546e7a; }
+    .page-item { padding: 5px 8px; font-size: 0.85rem; color: #bdc3c7; cursor: pointer; border-radius: 4px; margin: 2px 0; }
+    .page-item:hover, .page-item.active { color: #fff; background: #16a085; font-weight: bold; }
+
+    /* 主內容區 Main Content */
+    .main-content { flex: 1; display: flex; flex-direction: column; background: #fff; overflow-y: auto; }
+    .top-bar { padding: 15px 20px; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; background: #fafafa; }
+    .view-container { padding: 25px; flex: 1; }
+
+    /* 前台視圖 Frontend View */
+    .display-card { max-width: 750px; margin: 0 auto; text-align: center; }
+    .chinese-title-display { font-size: 1.2rem; color: #d35400; font-weight: bold; margin-bottom: 15px; background: #fef5e7; padding: 8px 16px; border-radius: 20px; display: inline-block; }
+    .display-img { max-width: 100%; max-height: 420px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.12); margin-bottom: 20px; }
+    
+    .section-label { font-size: 0.9rem; color: #7f8c8d; font-weight: bold; margin: 15px 0 8px 0; }
+    .audio-group { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 20px; }
+    .audio-btn { padding: 10px 18px; border: none; border-radius: 20px; cursor: pointer; font-weight: bold; font-size: 0.95rem; color: white; transition: 0.2s; box-shadow: 0 2px 6px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 6px; }
+    .btn-dr { background-color: #27ae60; } .btn-dr:hover { background-color: #219150; }
+    .btn-chien { background-color: #e67e22; } .btn-chien:hover { background-color: #d35400; }
+    .btn-zh { background-color: #8e44ad; } .btn-zh:hover { background-color: #71368a; }
+    .audio-btn.playing { animation: pulse 1.5s infinite; border: 2px solid #fff; }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+
+    /* 後台管理 Backend View */
+    .admin-panel { max-width: 800px; margin: 0 auto; background: #fafafa; border: 1px solid #ddd; padding: 25px; border-radius: 10px; }
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; font-weight: bold; margin-bottom: 6px; color: #2c3e50; }
+    .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.95rem; }
+    .submit-btn { background: #2980b9; color: white; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem; width: 100%; margin-top: 10px; }
+    .submit-btn:hover { background: #2171a5; }
+  </style>
+</head>
+<body>
+
+  <!-- 側邊欄：前/後台切換與章節選擇 -->
+  <div class="sidebar">
+    <div class="sidebar-header">童謠發音學習與管理系統</div>
+    <div class="nav-tabs">
+      <div class="nav-tab active" id="tab-front" onclick="switchMode('front')">📖 前台學習</div>
+      <div class="nav-tab" id="tab-admin" onclick="switchMode('admin')">⚙️ 後台管理</div>
+    </div>
+    <div class="tree-container" id="tree-container">
+      <!-- 動態載入冊別與童謠 -->
+    </div>
+  </div>
+
+  <!-- 主內容展示區 -->
+  <div class="main-content">
+    <div class="top-bar">
+      <h2 id="current-title" style="margin: 0; font-size: 1.2rem; color: #2c3e50;">請選擇童謠章節</h2>
+    </div>
+
+    <div class="view-container">
+      <!-- 前台學習視圖 -->
+      <div id="front-view" class="display-card">
+        <div id="display-chinese-title" class="chinese-title-display" style="display:none;"></div>
+        <div>
+          <img id="display-image" class="display-img" src="" alt="請選擇頁數" style="display:none;">
+        </div>
+
+        <div id="audio-section" style="display:none;">
+          <div class="section-label">--- 頁數/圖卡音檔 ---</div>
+          <div class="audio-group">
+            <button class="audio-btn btn-dr" id="btn-dr" onclick="playAudio('dr', this)">🎓 博士音檔</button>
+            <button class="audio-btn btn-chien" id="btn-chien" onclick="playAudio('chien', this)">👩‍🏫 大蒨音檔</button>
+            <button class="audio-btn btn-zh" id="btn-zh" onclick="playAudio('zh', this)">🇹🇼 中文音檔</button>
+          </div>
+
+          <div class="section-label">--- 整首童謠音檔 ---</div>
+          <div class="audio-group">
+            <button class="audio-btn btn-dr" id="btn-full_dr" onclick="playAudio('full_dr', this)">🎼 整首 - 博士</button>
+            <button class="audio-btn btn-chien" id="btn-full_chien" onclick="playAudio('full_chien', this)">🎼 整首 - 大蒨</button>
+            <button class="audio-btn btn-zh" id="btn-full_zh" onclick="playAudio('full_zh', this)">🎼 整首 - 中文</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 後台管理視圖 -->
+      <div id="admin-view" class="admin-panel" style="display:none;">
+        <h3 style="margin-top:0; color:#2c3e50; border-bottom:2px solid #eee; padding-bottom:10px;">上傳 / 新增童謠內容</h3>
+        
+        <div class="form-group">
+          <label>選擇冊別：</label>
+          <select id="adm-volume">
+            <option value="1">第一冊</option>
+            <option value="2">第二冊</option>
+            <option value="3">第三冊</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>童謠英文名稱與編號：</label>
+          <input type="text" id="adm-song-name" placeholder="例如：1-1 Rain, rain, go away">
+        </div>
+        <div class="form-group">
+          <label>童謠中文名稱 / 翻譯歌詞：</label>
+          <input type="text" id="adm-song-chinese" placeholder="例如：語啊 語啊 別再下">
+        </div>
+        <div class="form-group">
+          <label>頁數 / 圖卡名稱：</label>
+          <input type="text" id="adm-page-name" placeholder="例如：第 1 頁">
+        </div>
+        <div class="form-group">
+          <label>上傳本頁圖片：</label>
+          <input type="file" id="adm-img-file" accept="image/*">
+        </div>
+
+        <hr style="border:none; border-top:1px dashed #ccc; margin:20px 0;">
+        <h4 style="color:#e67e22; margin:0 0 10px 0;">📄 本頁獨立音檔</h4>
+        <div class="form-group">
+          <label>🎓 博士音檔：</label>
+          <input type="file" id="adm-audio-dr" accept="audio/*">
+        </div>
+        <div class="form-group">
+          <label>👩‍🏫 大蒨音檔：</label>
+          <input type="file" id="adm-audio-chien" accept="audio/*">
+        </div>
+        <div class="form-group">
+          <label>🇹🇼 中文音檔：</label>
+          <input type="file" id="adm-audio-zh" accept="audio/*">
+        </div>
+
+        <hr style="border:none; border-top:1px dashed #ccc; margin:20px 0;">
+        <h4 style="color:#27ae60; margin:0 0 10px 0;">🎵 整首童謠音檔（選填，同一首會自動共用）</h4>
+        <div class="form-group">
+          <label>🎼 整首 - 博士音檔：</label>
+          <input type="file" id="adm-full-dr" accept="audio/*">
+        </div>
+        <div class="form-group">
+          <label>🎼 整首 - 大蒨音檔：</label>
+          <input type="file" id="adm-full-chien" accept="audio/*">
+        </div>
+        <div class="form-group">
+          <label>🎼 整首 - 中文音檔：</label>
+          <input type="file" id="adm-full-zh" accept="audio/*">
+        </div>
+
+        <button class="submit-btn" onclick="saveData()">儲存並更新資料庫</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let db;
+    let currentMode = 'front';
+    let currentActiveData = null;
+    let activeAudioObj = null;
+    let activeAudioType = null;
+    let activeBtnElement = null;
+
+    const originalBtnTexts = {
+      'dr': '🎓 博士音檔',
+      'chien': '👩‍🏫 大蒨音檔',
+      'zh': '🇹🇼 中文音檔',
+      'full_dr': '🎼 整首 - 博士',
+      'full_chien': '🎼 整首 - 大蒨',
+      'full_zh': '🎼 整首 - 中文'
+    };
+
+    // 開啟 IndexedDB 本地數據庫
+    const request = indexedDB.open("RhymeDB", 2);
+    request.onupgradeneeded = (e) => {
+      db = e.target.result;
+      if (!db.objectStoreNames.contains("rhymes")) {
+        db.createObjectStore("rhymes", { keyPath: "id" });
+      }
+    };
+    request.onsuccess = (e) => {
+      db = e.target.result;
+      loadSidebarTree();
+    };
+
+    function switchMode(mode) {
+      currentMode = mode;
+      document.getElementById('tab-front').classList.toggle('active', mode === 'front');
+      document.getElementById('tab-admin').classList.toggle('active', mode === 'admin');
+      document.getElementById('front-view').style.display = mode === 'front' ? 'block' : 'none';
+      document.getElementById('admin-view').style.display = mode === 'admin' ? 'block' : 'none';
+    }
+
+    // 讀取並渲染側邊欄目錄
+    function loadSidebarTree() {
+      const tx = db.transaction("rhymes", "readonly");
+      const store = tx.objectStore("rhymes");
+      const req = store.getAll();
+
+      req.onsuccess = () => {
+        const data = req.result;
+        const container = document.getElementById('tree-container');
+        container.innerHTML = '';
+
+        [1, 2, 3].forEach(vol => {
+          const volTitle = document.createElement('div');
+          volTitle.className = 'volume-title';
+          volTitle.textContent = `第 ${vol} 冊`;
+          container.appendChild(volTitle);
+
+          const volData = data.filter(item => parseInt(item.volume) === vol);
+          const songsMap = {};
+
+          volData.forEach(item => {
+            if (!songsMap[item.songName]) songsMap[item.songName] = [];
+            songsMap[item.songName].push(item);
+          });
+
+          for (let songName in songsMap) {
+            const pages = songsMap[songName];
+            const songChinese = pages[0].songChinese || '';
+
+            const songDiv = document.createElement('div');
+            songDiv.className = 'song-item';
+            
+            const songHeader = document.createElement('div');
+            songHeader.className = 'song-header';
+            songHeader.innerHTML = `<span>${songName}</span>${songChinese ? `<small style="color:#f39c12; font-weight:normal;">(${songChinese})</small>` : ''}`;
+            songDiv.appendChild(songHeader);
+
+            const pageList = document.createElement('div');
+            pageList.className = 'page-list';
+
+            pages.forEach(pageItem => {
+              const pageDiv = document.createElement('div');
+              pageDiv.className = 'page-item';
+              pageDiv.textContent = pageItem.pageName;
+              pageDiv.onclick = (e) => {
+                e.stopPropagation();
+                selectPage(pageItem);
+              };
+              pageList.appendChild(pageDiv);
+            });
+
+            songDiv.appendChild(pageList);
+            container.appendChild(songDiv);
+          }
+        });
+      };
+    }
+
+    // 重置所有按鈕狀態
+    function resetAllButtons() {
+      for (let type in originalBtnTexts) {
+        const btn = document.getElementById(`btn-${type}`);
+        if (btn) {
+          btn.textContent = originalBtnTexts[type];
+          btn.classList.remove('playing');
+        }
+      }
+    }
+
+    // 選擇特定頁數展示
+    function selectPage(item) {
+      if (activeAudioObj) {
+        activeAudioObj.pause();
+        activeAudioObj = null;
+      }
+      resetAllButtons();
+
+      currentActiveData = item;
+      document.getElementById('current-title').textContent = `${item.songName} - ${item.pageName}`;
+
+      const zhTitleEl = document.getElementById('display-chinese-title');
+      if (item.songChinese) {
+        zhTitleEl.textContent = `中文翻譯：${item.songChinese}`;
+        zhTitleEl.style.display = 'inline-block';
+      } else {
+        zhTitleEl.style.display = 'none';
+      }
+
+      if (item.imageBlob) {
+        const imgEl = document.getElementById('display-image');
+        imgEl.src = URL.createObjectURL(item.imageBlob);
+        imgEl.style.display = 'block';
+      }
+
+      document.getElementById('audio-section').style.display = 'block';
+    }
+
+    // 播放 / 暫停 音檔控制
+    function playAudio(type, btnEl) {
+      if (!currentActiveData) return;
+
+      // 同一個按鈕：切換 暫停 / 繼續
+      if (activeAudioType === type && activeAudioObj) {
+        if (activeAudioObj.paused) {
+          activeAudioObj.play();
+          btnEl.textContent = `⏸️ 暫停 (${originalBtnTexts[type]})`;
+          btnEl.classList.add('playing');
+        } else {
+          activeAudioObj.pause();
+          btnEl.textContent = `▶️ 繼續 (${originalBtnTexts[type]})`;
+          btnEl.classList.remove('playing');
+        }
+        return;
+      }
+
+      // 切換不同音檔時，停止前一個
+      if (activeAudioObj) {
+        activeAudioObj.pause();
+      }
+      resetAllButtons();
+
+      const blob = currentActiveData[`audio_${type}`];
+      if (!blob) {
+        alert("此類別尚未上傳音檔！");
+        return;
+      }
+
+      const audioUrl = URL.createObjectURL(blob);
+      activeAudioObj = new Audio(audioUrl);
+      activeAudioType = type;
+      activeBtnElement = btnEl;
+
+      activeAudioObj.play();
+      btnEl.textContent = `⏸️ 暫停 (${originalBtnTexts[type]})`;
+      btnEl.classList.add('playing');
+
+      // 播放完畢自動重置
+      activeAudioObj.onended = () => {
+        btnEl.textContent = originalBtnTexts[type];
+        btnEl.classList.remove('playing');
+        activeAudioObj = null;
+        activeAudioType = null;
+      };
+    }
+
+    // 後台儲存資料
+    async function saveData() {
+      const volume = document.getElementById('adm-volume').value;
+      const songName = document.getElementById('adm-song-name').value.trim();
+      const songChinese = document.getElementById('adm-song-chinese').value.trim();
+      const pageName = document.getElementById('adm-page-name').value.trim();
+
+      if (!songName || !pageName) {
+        alert("請輸入童謠名稱與頁數！");
+        return;
+      }
+
+      const imgFile = document.getElementById('adm-img-file').files[0];
+      
+      const drFile = document.getElementById('adm-audio-dr').files[0];
+      const chienFile = document.getElementById('adm-audio-chien').files[0];
+      const zhFile = document.getElementById('adm-audio-zh').files[0];
+
+      const fullDrFile = document.getElementById('adm-full-dr').files[0];
+      const fullChienFile = document.getElementById('adm-full-chien').files[0];
+      const fullZhFile = document.getElementById('adm-full-zh').files[0];
+
+      const record = {
+        id: `${volume}_${songName}_${pageName}`,
+        volume: volume,
+        songName: songName,
+        songChinese: songChinese,
+        pageName: pageName,
+        imageBlob: imgFile || null,
+        audio_dr: drFile || null,
+        audio_chien: chienFile || null,
+        audio_zh: zhFile || null,
+        audio_full_dr: fullDrFile || null,
+        audio_full_chien: fullChienFile || null,
+        audio_full_zh: fullZhFile || null
+      };
+
+      const tx = db.transaction("rhymes", "readwrite");
+      const store = tx.objectStore("rhymes");
+      store.put(record);
+
+      tx.oncomplete = () => {
+        alert("儲存成功！");
+        loadSidebarTree();
+        switchMode('front');
+      };
+    }
+  </script>
+</body>
+</html>
