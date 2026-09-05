@@ -47,7 +47,7 @@
       100% { transform: scale(1); }
     }
 
-    /* 後台管理 Backend View */
+    /* 後台管理視圖 Backend View */
     .admin-panel { max-width: 800px; margin: 0 auto; background: #fafafa; border: 1px solid #ddd; padding: 25px; border-radius: 10px; }
     .form-group { margin-bottom: 15px; }
     .form-group label { display: block; font-weight: bold; margin-bottom: 6px; color: #2c3e50; }
@@ -63,7 +63,7 @@
     <div class="sidebar-header">童謠發音學習與管理系統</div>
     <div class="nav-tabs">
       <div class="nav-tab active" id="tab-front" onclick="switchMode('front')">📖 前台學習</div>
-      <div class="nav-tab" id="tab-admin" onclick="switchMode('admin')">⚙️ 後台管理</div>
+      <div class="nav-tab" id="tab-admin" onclick="switchMode('admin')">🔒 後台管理</div>
     </div>
     <div class="tree-container" id="tree-container">
       <!-- 動態載入冊別與童謠 -->
@@ -168,6 +168,9 @@
   <script>
     let db;
     let currentMode = 'front';
+    let isAdminUnlocked = false; // 管理員驗證狀態
+    const ADMIN_PASSWORD = "1234"; // 管理員預設密碼 (可自訂)
+
     let currentActiveData = null;
     let activeAudioObj = null;
     let activeAudioType = null;
@@ -195,7 +198,21 @@
       loadSidebarTree();
     };
 
+    // 切換模式（含密碼驗證）
     function switchMode(mode) {
+      if (mode === 'admin' && !isAdminUnlocked) {
+        const inputPwd = prompt("🔒 請輸入管理員密碼以進入後台：");
+        if (inputPwd === ADMIN_PASSWORD) {
+          isAdminUnlocked = true;
+          alert("解鎖成功！已進入管理後台。");
+        } else if (inputPwd !== null) {
+          alert("密碼錯誤，無法進入後台！");
+          return;
+        } else {
+          return; // 使用者點擊取消
+        }
+      }
+
       currentMode = mode;
       document.getElementById('tab-front').classList.toggle('active', mode === 'front');
       document.getElementById('tab-admin').classList.toggle('active', mode === 'admin');
@@ -304,7 +321,6 @@
     function playAudio(type, btnEl) {
       if (!currentActiveData) return;
 
-      // 同一個按鈕：切換 暫停 / 繼續
       if (activeAudioType === type && activeAudioObj) {
         if (activeAudioObj.paused) {
           activeAudioObj.play();
@@ -318,7 +334,6 @@
         return;
       }
 
-      // 切換不同音檔時，停止前一個
       if (activeAudioObj) {
         activeAudioObj.pause();
       }
@@ -339,7 +354,6 @@
       btnEl.textContent = `⏸️ 暫停 (${originalBtnTexts[type]})`;
       btnEl.classList.add('playing');
 
-      // 播放完畢自動重置
       activeAudioObj.onended = () => {
         btnEl.textContent = originalBtnTexts[type];
         btnEl.classList.remove('playing');
