@@ -1,413 +1,1065 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>童謠發音學習與管理系統</title>
-  <style>
-    * { box-sizing: border-box; font-family: "PingFang TC", "Microsoft JhengHei", sans-serif; }
-    body { margin: 0; background-color: #f4f6f8; display: flex; height: 100vh; overflow: hidden; }
-    
-    /* 側邊欄 Sidebar */
-    .sidebar { width: 320px; background: #2c3e50; color: #ecf0f1; display: flex; flex-direction: column; justify-content: space-between; }
-    .sidebar-header { padding: 15px; background: #1a252f; text-align: center; font-weight: bold; font-size: 1.1rem; }
-    .tree-container { flex: 1; overflow-y: auto; padding: 10px; }
-    .volume-title { font-weight: bold; color: #f1c40f; margin: 12px 0 6px 5px; font-size: 1rem; border-bottom: 1px solid #455a64; padding-bottom: 4px; }
-    .song-item { padding: 8px 12px; margin: 4px 0; background: #34495e; border-radius: 6px; cursor: pointer; font-size: 0.9rem; }
-    .song-item:hover, .song-item.active { background: #2980b9; }
-    .song-header { font-weight: bold; display: flex; justify-content: space-between; align-items: center; }
-    .page-list { margin-left: 12px; margin-top: 6px; padding-left: 8px; border-left: 2px solid #546e7a; }
-    .page-item { padding: 5px 8px; font-size: 0.85rem; color: #bdc3c7; cursor: pointer; border-radius: 4px; margin: 2px 0; }
-    .page-item:hover, .page-item.active { color: #fff; background: #16a085; font-weight: bold; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>童謠開心門</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Nunito:wght@600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #5c8374;
+            --primary-light: #eaf1ed;
+            --accent: #e09f3e;
+            --bg: #f5f7f6;
+            --card-bg: #ffffff;
+            --text: #2b2b2b;
+            --sidebar-width: 320px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Noto Sans TC', sans-serif, 'Nunito';
+            background-color: var(--bg);
+            color: var(--text);
+            height: 100vh;
+            display: flex;
+            overflow: hidden;
+        }
 
-    /* 底部純圖示按鈕 */
-    .sidebar-footer { padding: 12px; background: #1a252f; display: flex; justify-content: flex-end; align-items: center; }
-    .icon-btn { background: transparent; border: none; font-size: 1.3rem; cursor: pointer; color: #95a5a6; padding: 5px 10px; border-radius: 6px; transition: 0.2s; }
-    .icon-btn:hover { color: #fff; background: #34495e; }
+        /* 左側導航與樹狀下拉選單 */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--card-bg);
+            border-right: 1px solid #e0e5e2;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.02);
+            z-index: 10;
+        }
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #eee;
+            background-color: #fafbfb;
+        }
+        .sidebar-header h2 {
+            font-size: 1.2rem;
+            color: var(--primary);
+            margin-bottom: 4px;
+        }
+        .sidebar-header p {
+            font-size: 0.85rem;
+            color: #666;
+        }
+        .volume-list {
+            overflow-y: auto;
+            flex: 1;
+            padding: 12px;
+        }
 
-    /* 主內容區 Main Content */
-    .main-content { flex: 1; display: flex; flex-direction: column; background: #fff; overflow-y: auto; }
-    .top-bar { padding: 15px 20px; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center; background: #fafafa; }
-    .view-container { padding: 25px; flex: 1; }
+        .volume-group {
+            margin-bottom: 8px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid #edf2ef;
+            background: #fafbfb;
+        }
+        .volume-toggle {
+            width: 100%;
+            background: #f0f4f1;
+            border: none;
+            padding: 12px 16px;
+            text-align: left;
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--primary);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.2s;
+        }
+        .volume-toggle:hover {
+            background: #e5ede8;
+        }
+        .volume-toggle .arrow {
+            transition: transform 0.3s ease;
+            font-size: 0.8rem;
+        }
+        .volume-group.open .volume-toggle .arrow {
+            transform: rotate(90deg);
+        }
 
-    /* 前台視圖 Frontend View */
-    .display-card { max-width: 750px; margin: 0 auto; text-align: center; }
-    .chinese-title-display { font-size: 1.2rem; color: #d35400; font-weight: bold; margin-bottom: 15px; background: #fef5e7; padding: 8px 16px; border-radius: 20px; display: inline-block; }
-    .display-img { max-width: 100%; max-height: 420px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.12); margin-bottom: 20px; }
-    
-    .section-label { font-size: 0.9rem; color: #7f8c8d; font-weight: bold; margin: 15px 0 8px 0; }
-    .audio-group { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 20px; }
-    .audio-btn { padding: 10px 18px; border: none; border-radius: 20px; cursor: pointer; font-weight: bold; font-size: 0.95rem; color: white; transition: 0.2s; box-shadow: 0 2px 6px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 6px; }
-    .btn-dr { background-color: #27ae60; } .btn-dr:hover { background-color: #219150; }
-    .btn-chien { background-color: #e67e22; } .btn-chien:hover { background-color: #d35400; }
-    .btn-zh { background-color: #8e44ad; } .btn-zh:hover { background-color: #71368a; }
-    .audio-btn.playing { animation: pulse 1.5s infinite; border: 2px solid #fff; }
+        .lesson-sublist {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-in-out;
+            background: white;
+            padding: 0 8px;
+        }
+        .volume-group.open .lesson-sublist {
+            max-height: 1500px;
+            padding: 8px;
+            overflow-y: auto;
+        }
+        .lesson-item {
+            padding: 10px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-bottom: 4px;
+            transition: background 0.2s, color 0.2s;
+            font-size: 0.9rem;
+            color: #444;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .lesson-item:hover {
+            background-color: #f5f8f6;
+            color: var(--primary);
+        }
+        .lesson-item.active {
+            background-color: var(--primary);
+            color: white;
+            font-weight: 600;
+        }
 
-    @keyframes pulse {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.05); }
-      100% { transform: scale(1); }
-    }
+        /* 右側主內容區 */
+        .main-content {
+            flex: 1;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            padding: 20px 40px;
+        }
+        .content-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+            border: 1px solid #e5ede8;
+            width: 100%;
+            max-width: none;
+            margin: 0;
+        }
+        .lesson-title-area {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #f0f4f1;
+            padding-bottom: 15px;
+        }
+        .lesson-title-area h1 {
+            font-size: 1.5rem;
+            color: var(--primary);
+        }
+        .badge {
+            background-color: var(--primary-light);
+            color: var(--primary);
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
 
-    /* 後台管理視圖 Backend View */
-    .admin-panel { max-width: 800px; margin: 0 auto; background: #fafafa; border: 1px solid #ddd; padding: 25px; border-radius: 10px; }
-    .form-group { margin-bottom: 15px; }
-    .form-group label { display: block; font-weight: bold; margin-bottom: 6px; color: #2c3e50; }
-    .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 0.95rem; }
-    .submit-btn { background: #2980b9; color: white; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem; width: 100%; margin-top: 10px; }
-    .submit-btn:hover { background: #2171a5; }
-  </style>
+        .section-box {
+            background: #fafbfb;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid #edf2ef;
+        }
+        .section-box h3 {
+            color: var(--primary);
+            font-size: 1.1rem;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* 選擇冊別與選擇名稱設定區塊 */
+        .meta-edit-grid {
+            display: grid;
+            grid-template-columns: 140px 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 15px;
+            background: #ffffff;
+            padding: 14px;
+            border-radius: 10px;
+            border: 1px solid #d5e2dc;
+            align-items: center;
+        }
+        .meta-field label {
+            display: block;
+            font-size: 0.8rem;
+            color: #666;
+            margin-bottom: 4px;
+            font-weight: 600;
+        }
+        .meta-field select, .meta-field input {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid #b5c9be;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            background: #fff;
+            color: var(--text);
+            outline: none;
+        }
+        .meta-field select:focus, .meta-field input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(92, 131, 116, 0.15);
+        }
+
+        /* 上傳與媒體區塊控制 */
+        .upload-panel {
+            border: 2px dashed #b5c9be;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            background: #ffffff;
+            margin-bottom: 15px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .upload-panel:hover {
+            background: #f0f5f2;
+        }
+        .upload-panel input[type="file"] {
+            display: none;
+        }
+        .preview-img {
+            max-width: 100%;
+            max-height: 420px;
+            border-radius: 8px;
+            margin-top: 10px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        /* 單一音軌按鈕樣式 */
+        .track-btn {
+            background-color: white;
+            border: 1px solid #b5c9be;
+            color: var(--primary);
+            padding: 6px 14px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin: 4px;
+            transition: all 0.2s;
+        }
+        .track-btn:hover {
+            background-color: var(--primary-light);
+        }
+        .track-btn.no-audio {
+            opacity: 0.5;
+            border-color: #d0dcd6;
+            background-color: #f7f9f8;
+        }
+        .track-btn.no-audio:hover {
+            opacity: 0.8;
+        }
+
+        /* 句子卡片排版 */
+        .sentence-card {
+            background: white;
+            padding: 16px 20px;
+            border-radius: 12px;
+            margin-bottom: 14px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+            border: 1px solid #eaeef0;
+        }
+        .sentence-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .sentence-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #2c3e50;
+        }
+        .delete-sentence-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            cursor: pointer;
+        }
+        .delete-sentence-btn:hover {
+            background: #c0392b;
+        }
+
+        .action-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+        }
+        .add-btn {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: opacity 0.2s;
+        }
+        .add-btn:hover { opacity: 0.9; }
+
+        /* 資料重設按鈕區 */
+        .reset-data-btn {
+            background: #95a5a6;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 7px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            margin-left: 5px;
+        }
+        .reset-data-btn:hover { background: #7f8c8d; }
+
+        /* 登入與管理模式 */
+        .login-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(43, 43, 43, 0.45);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        .login-box {
+            width: min(380px, calc(100vw - 32px));
+            background: #fff;
+            border-radius: 16px;
+            padding: 28px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.18);
+        }
+        .login-box h2 {
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+        .login-box p {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 18px;
+        }
+        .login-box label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin: 12px 0 5px;
+            color: #555;
+        }
+        .login-box input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #b5c9be;
+            border-radius: 7px;
+            font-size: 0.95rem;
+        }
+        .login-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 18px;
+        }
+        .login-btn {
+            flex: 1;
+            border: none;
+            border-radius: 8px;
+            padding: 10px;
+            cursor: pointer;
+            font-weight: 700;
+        }
+        .login-btn.primary {
+            background: var(--primary);
+            color: white;
+        }
+        .login-btn.secondary {
+            background: #eef3f0;
+            color: var(--primary);
+        }
+        .login-error {
+            color: #d64545;
+            font-size: 0.82rem;
+            min-height: 20px;
+            margin-top: 8px;
+        }
+        .admin-bar {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .admin-status {
+            font-size: 0.82rem;
+            color: var(--primary);
+            background: var(--primary-light);
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-weight: 600;
+        }
+        .logout-btn {
+            border: 1px solid #cbd8d1;
+            background: white;
+            color: #555;
+            border-radius: 7px;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        @media (max-width: 900px) {
+            body { flex-direction: column; height: auto; overflow: auto; }
+            .sidebar { width: 100%; height: auto; max-height: 420px; }
+            .main-content { height: auto; padding: 15px; }
+            .meta-edit-grid { grid-template-columns: 1fr; }
+        }
+    </style>
 </head>
 <body>
 
-  <!-- 側邊欄 -->
-  <div class="sidebar">
-    <div>
-      <div class="sidebar-header" onclick="switchMode('front')" style="cursor:pointer;">童謠發音學習與管理系統</div>
-      <div class="tree-container" id="tree-container">
-        <!-- 動態載入冊別與童謠 -->
-      </div>
+    <!-- 登入視窗 -->
+    <div class="login-overlay" id="loginOverlay" style="display:none;">
+        <div class="login-box">
+            <h2>🔐 管理員登入</h2>
+            <p>登入後才能上傳圖片、音檔及修改童謠資料。</p>
+            <label for="loginUsername">帳號</label>
+            <input type="text" id="loginUsername" autocomplete="username" placeholder="請輸入管理員帳號">
+            <label for="loginPassword">密碼</label>
+            <input type="password" id="loginPassword" autocomplete="current-password" placeholder="請輸入管理員密碼">
+            <div class="login-error" id="loginError"></div>
+            <div class="login-actions">
+                <button class="login-btn primary" onclick="loginAdmin()">登入</button>
+                <button class="login-btn secondary" onclick="closeLogin()">取消</button>
+            </div>
+        </div>
     </div>
 
-    <!-- 最下方純圖示按鈕 -->
-    <div class="sidebar-footer">
-      <button class="icon-btn" onclick="switchMode('admin')" title="後台管理">⚙️</button>
-    </div>
-  </div>
-
-  <!-- 主內容展示區 -->
-  <div class="main-content">
-    <div class="top-bar">
-      <h2 id="current-title" style="margin: 0; font-size: 1.2rem; color: #2c3e50;">請選擇童謠章節</h2>
+    <!-- 左側導航 -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h2>童謠開心門</h2>
+            <p>圖片與多音軌音檔管理</p>
+        </div>
+        <div class="volume-list" id="volumeList"></div>
     </div>
 
-    <div class="view-container">
-      <!-- 前台學習視圖 -->
-      <div id="front-view" class="display-card">
-        <div id="display-chinese-title" class="chinese-title-display" style="display:none;"></div>
-        <div>
-          <img id="display-image" class="display-img" src="" alt="請選擇頁數" style="display:none;">
-        </div>
+    <!-- 右側主內容區 -->
+    <div class="main-content">
+        <div class="content-card">
 
-        <div id="audio-section" style="display:none;">
-          <div class="section-label">--- 頁數/圖卡音檔 ---</div>
-          <div class="audio-group">
-            <button class="audio-btn btn-dr" id="btn-dr" onclick="playAudio('dr', this)">🎓 博士音檔</button>
-            <button class="audio-btn btn-chien" id="btn-chien" onclick="playAudio('chien', this)">👩‍🏫 大蒨音檔</button>
-            <button class="audio-btn btn-zh" id="btn-zh" onclick="playAudio('zh', this)">🇹🇼 中文音檔</button>
-          </div>
+            <div class="admin-bar">
+                <span class="admin-status" id="adminStatus">👤 瀏覽模式</span>
+                <button class="login-btn primary" id="loginOpenBtn" style="flex:none;padding:6px 12px;" onclick="openLogin()">🔐 管理員登入</button>
+                <button class="logout-btn" id="logoutBtn" style="display:none;" onclick="logoutAdmin()">登出</button>
+                <button class="reset-data-btn" id="resetDataBtn" style="display:none;" onclick="resetLocalStorageData()" title="清空本機儲存並恢復預設">🔄 重設資料</button>
+            </div>
+            <div class="lesson-title-area">
+                <h1 id="currentTitle">載入中...</h1>
+                <span class="badge" id="currentBadge">第一冊</span>
+            </div>
 
-          <div class="section-label">--- 整首童謠音檔 ---</div>
-          <div class="audio-group">
-            <button class="audio-btn btn-dr" id="btn-full_dr" onclick="playAudio('full_dr', this)">🎼 整首 - 博士</button>
-            <button class="audio-btn btn-chien" id="btn-full_chien" onclick="playAudio('full_chien', this)">🎼 整首 - 大蒨</button>
-            <button class="audio-btn btn-zh" id="btn-full_zh" onclick="playAudio('full_zh', this)">🎼 整首 - 中文</button>
-          </div>
-        </div>
-      </div>
+            <!-- 整首圖片與多音軌區塊 -->
+            <div class="section-box">
+                <h3>🖼️ 童謠開心門圖片與多音軌音檔</h3>
+                
+                <!-- 選擇冊別、選擇童謠名稱與修改名稱設定區塊 -->
+                <div class="meta-edit-grid">
+                    <div class="meta-field">
+                        <label>選擇冊別</label>
+                        <select id="bookSelect" onchange="switchVolume(this.value)">
+                            <option value="1">第一冊</option>
+                            <option value="2">第二冊</option>
+                            <option value="3">第三冊</option>
+                        </select>
+                    </div>
+                    <div class="meta-field">
+                        <label>選擇童謠名稱</label>
+                        <select id="lessonSelect" onchange="switchLessonById(this.value)">
+                            <!-- 動態填入該冊所有童謠 -->
+                        </select>
+                    </div>
+                    <div class="meta-field">
+                        <label>修改童謠標題名稱</label>
+                        <input type="text" id="lessonTitleInput" oninput="updateLessonTitle(this.value)" placeholder="例: 1-1 求晴天外天...">
+                    </div>
+                </div>
 
-      <!-- 後台管理視圖 -->
-      <div id="admin-view" class="admin-panel" style="display:none;">
-        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #eee; padding-bottom:10px; margin-bottom:20px;">
-          <h3 style="margin:0; color:#2c3e50;">上傳 / 新增童謠內容</h3>
-          <button onclick="switchMode('front')" style="padding:6px 12px; background:#95a5a6; color:white; border:none; border-radius:4px; cursor:pointer;">返回前台</button>
-        </div>
-        
-        <div class="form-group">
-          <label>選擇冊別：</label>
-          <select id="adm-volume">
-            <option value="1">第一冊</option>
-            <option value="2">第二冊</option>
-            <option value="3">第三冊</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>童謠英文名稱與編號：</label>
-          <input type="text" id="adm-song-name" placeholder="例如：1-1 Rain, rain, go away">
-        </div>
-        <div class="form-group">
-          <label>童謠中文名稱 / 翻譯歌詞：</label>
-          <input type="text" id="adm-song-chinese" placeholder="例如：語啊 語啊 別再下">
-        </div>
-        <div class="form-group">
-          <label>頁數 / 圖卡名稱：</label>
-          <input type="text" id="adm-page-name" placeholder="例如：第 1 頁">
-        </div>
-        <div class="form-group">
-          <label>上傳本頁圖片：</label>
-          <input type="file" id="adm-img-file" accept="image/*">
-        </div>
+                <div class="upload-panel" onclick="if (isAdmin) document.getElementById('songImageInput').click()">
+                    <span>點擊此處上傳童謠開心門圖片</span>
+                    <input type="file" id="songImageInput" accept="image/*" onchange="handleSongImageUpload(event)">
+                    <div id="songImagePreviewContainer"></div>
+                </div>
 
-        <hr style="border:none; border-top:1px dashed #ccc; margin:20px 0;">
-        <h4 style="color:#e67e22; margin:0 0 10px 0;">📄 本頁獨立音檔</h4>
-        <div class="form-group">
-          <label>🎓 博士音檔：</label>
-          <input type="file" id="adm-audio-dr" accept="audio/*">
-        </div>
-        <div class="form-group">
-          <label>👩‍🏫 大蒨音檔：</label>
-          <input type="file" id="adm-audio-chien" accept="audio/*">
-        </div>
-        <div class="form-group">
-          <label>🇹🇼 中文音檔：</label>
-          <input type="file" id="adm-audio-zh" accept="audio/*">
-        </div>
+                <div style="font-size: 0.85rem; color: #555; margin-bottom: 6px; font-weight: 600;">整首音檔（點擊播放，若未上傳音檔則點擊可直接選擇檔案上傳）：</div>
+                <div id="songTracksContainer" style="display: flex; flex-wrap: wrap; gap: 4px;"></div>
+            </div>
 
-        <hr style="border:none; border-top:1px dashed #ccc; margin:20px 0;">
-        <h4 style="color:#27ae60; margin:0 0 10px 0;">🎵 整首童謠音檔（選填，同一首會自動共用）</h4>
-        <div class="form-group">
-          <label>🎼 整首 - 博士音檔：</label>
-          <input type="file" id="adm-full-dr" accept="audio/*">
+            <!-- 新增句子區塊 -->
+            <div class="section-box">
+                <h3>📝 句子圖檔與多音軌音檔</h3>
+                <div id="sentencesContainer"></div>
+                <div class="action-bar">
+                    <button class="add-btn" onclick="addNewSentence()">➕ 新增句子</button>
+                </div>
+            </div>
         </div>
-        <div class="form-group">
-          <label>🎼 整首 - 大蒨音檔：</label>
-          <input type="file" id="adm-full-chien" accept="audio/*">
-        </div>
-        <div class="form-group">
-          <label>🎼 整首 - 中文音檔：</label>
-          <input type="file" id="adm-full-zh" accept="audio/*">
-        </div>
-
-        <button class="submit-btn" onclick="saveData()">儲存並更新資料庫</button>
-      </div>
     </div>
-  </div>
 
-  <script>
-    let db;
-    let isAdminUnlocked = false;
-    const ADMIN_PASSWORD = "1234"; // 管理員密碼
+<script>
+    const ADMIN_USERNAME = "admin";
+    const ADMIN_PASSWORD = "1234";
+    let isAdmin = false;
 
-    let currentActiveData = null;
-    let activeAudioObj = null;
-    let activeAudioType = null;
-    let activeBtnElement = null;
-
-    const originalBtnTexts = {
-      'dr': '🎓 博士音檔',
-      'chien': '👩‍🏫 大蒨音檔',
-      'zh': '🇹🇼 中文音檔',
-      'full_dr': '🎼 整首 - 博士',
-      'full_chien': '🎼 整首 - 大蒨',
-      'full_zh': '🎼 整首 - 中文'
-    };
-
-    // 開啟 IndexedDB 本地數據庫
-    const request = indexedDB.open("RhymeDB", 2);
-    request.onupgradeneeded = (e) => {
-      db = e.target.result;
-      if (!db.objectStoreNames.contains("rhymes")) {
-        db.createObjectStore("rhymes", { keyPath: "id" });
-      }
-    };
-    request.onsuccess = (e) => {
-      db = e.target.result;
-      loadSidebarTree();
-    };
-
-    // 切換模式
-    function switchMode(mode) {
-      if (mode === 'admin') {
-        if (!isAdminUnlocked) {
-          const inputPwd = prompt("🔒 請輸入管理員密碼：");
-          if (inputPwd === ADMIN_PASSWORD) {
-            isAdminUnlocked = true;
-          } else if (inputPwd !== null) {
-            alert("密碼錯誤！");
-            return;
-          } else {
-            return;
-          }
-        }
-      }
-
-      document.getElementById('front-view').style.display = mode === 'front' ? 'block' : 'none';
-      document.getElementById('admin-view').style.display = mode === 'admin' ? 'block' : 'none';
+    function openLogin() {
+        document.getElementById('loginOverlay').style.display = 'flex';
+        document.getElementById('loginUsername').focus();
+        document.getElementById('loginError').innerText = '';
     }
 
-    // 讀取並渲染目錄
-    function loadSidebarTree() {
-      const tx = db.transaction("rhymes", "readonly");
-      const store = tx.objectStore("rhymes");
-      const req = store.getAll();
+    function closeLogin() {
+        document.getElementById('loginOverlay').style.display = 'none';
+        document.getElementById('loginPassword').value = '';
+    }
 
-      req.onsuccess = () => {
-        const data = req.result;
-        const container = document.getElementById('tree-container');
-        container.innerHTML = '';
+    function loginAdmin() {
+        const username = document.getElementById('loginUsername').value.trim();
+        const password = document.getElementById('loginPassword').value;
 
-        [1, 2, 3].forEach(vol => {
-          const volTitle = document.createElement('div');
-          volTitle.className = 'volume-title';
-          volTitle.textContent = `第 ${vol} 冊`;
-          container.appendChild(volTitle);
+        if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+            isAdmin = true;
+            closeLogin();
+            updatePermissionUI();
+            loadCurrentLesson();
+        } else {
+            document.getElementById('loginError').innerText = '帳號或密碼錯誤，請重新輸入。';
+        }
+    }
 
-          const volData = data.filter(item => parseInt(item.volume) === vol);
-          const songsMap = {};
+    function logoutAdmin() {
+        isAdmin = false;
+        updatePermissionUI();
+        loadCurrentLesson();
+    }
 
-          volData.forEach(item => {
-            if (!songsMap[item.songName]) songsMap[item.songName] = [];
-            songsMap[item.songName].push(item);
-          });
+    function updateUploadUI() {
+        const editGrid = document.querySelector('.meta-edit-grid');
+        const songUploadPanel = document.querySelector('#songImageInput')?.closest('.upload-panel');
+        const songUploadPrompt = songUploadPanel?.querySelector('span');
+        const songUploadInput = document.getElementById('songImageInput');
+        const songUploadLabel = document.querySelector('.section-box > div[style*="整首音檔"]');
+        const addBtn = document.querySelector('.add-btn');
 
-          for (let songName in songsMap) {
-            const pages = songsMap[songName];
-            const songChinese = pages[0].songChinese || '';
+        if (editGrid) editGrid.style.display = isAdmin ? 'grid' : 'none';
+        if (songUploadPanel) songUploadPanel.style.display = '';
+        if (songUploadPrompt) songUploadPrompt.style.display = isAdmin ? '' : 'none';
+        if (songUploadInput) songUploadInput.style.display = 'none';
+        if (songUploadLabel) songUploadLabel.style.display = isAdmin ? '' : 'none';
+        if (addBtn) addBtn.style.display = isAdmin ? '' : 'none';
 
-            const songDiv = document.createElement('div');
-            songDiv.className = 'song-item';
-            
-            const songHeader = document.createElement('div');
-            songHeader.className = 'song-header';
-            songHeader.innerHTML = `<span>${songName}</span>${songChinese ? `<small style="color:#f39c12; font-weight:normal;">(${songChinese})</small>` : ''}`;
-            songDiv.appendChild(songHeader);
+        document.querySelectorAll('.sentence-card').forEach(card => {
+            const sentenceUpload = card.querySelector('.upload-panel');
+            const sentencePrompt = sentenceUpload?.querySelector('span');
+            const sentenceInput = sentenceUpload?.querySelector('input[type="file"]');
+            const deleteBtn = card.querySelector('.delete-sentence-btn');
+            if (sentenceUpload) sentenceUpload.style.display = '';
+            if (sentencePrompt) sentencePrompt.style.display = isAdmin ? '' : 'none';
+            if (sentenceInput) sentenceInput.style.display = 'none';
+            if (deleteBtn) deleteBtn.style.display = isAdmin ? '' : 'none';
+        });
+    }
 
-            const pageList = document.createElement('div');
-            pageList.className = 'page-list';
+    function updatePermissionUI() {
+        const status = document.getElementById('adminStatus');
+        const openBtn = document.getElementById('loginOpenBtn');
+        const logoutBtn = document.getElementById('logoutBtn');
+        const resetBtn = document.getElementById('resetDataBtn');
 
-            pages.forEach(pageItem => {
-              const pageDiv = document.createElement('div');
-              pageDiv.className = 'page-item';
-              pageDiv.textContent = pageItem.pageName;
-              pageDiv.onclick = (e) => {
-                e.stopPropagation();
-                selectPage(pageItem);
-              };
-              pageList.appendChild(pageDiv);
+        if (isAdmin) {
+            status.innerText = '🔓 管理模式';
+            openBtn.style.display = 'none';
+            logoutBtn.style.display = 'inline-block';
+            resetBtn.style.display = 'inline-block';
+        } else {
+            status.innerText = '👤 瀏覽模式';
+            openBtn.style.display = 'inline-block';
+            logoutBtn.style.display = 'none';
+            resetBtn.style.display = 'none';
+        }
+
+        document.getElementById('lessonTitleInput').disabled = !isAdmin;
+        document.getElementById('bookSelect').disabled = !isAdmin;
+        document.getElementById('songImageInput').disabled = !isAdmin;
+        document.querySelector('.add-btn').style.display = isAdmin ? '' : 'none';
+
+        document.querySelectorAll('.upload-panel').forEach(panel => {
+            panel.style.cursor = isAdmin ? 'pointer' : 'default';
+        });
+
+        updateUploadUI();
+    }
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && document.getElementById('loginOverlay').style.display === 'flex') {
+            loginAdmin();
+        }
+        if (e.key === 'Escape' && document.getElementById('loginOverlay').style.display === 'flex') {
+            closeLogin();
+        }
+    });
+
+    // 預設資料結構
+    function getDefaultVolumesData() {
+        return [
+            {
+                volumeId: 1,
+                volumeTitle: "第一冊",
+                lessons: [
+                    { id: 1, title: "1-1 求晴天外天｜Rain, rain, go away", songImage: "", songAudios: { '博士': '', '大蒨': '', '慢速': '', '分解': '', '翻譯': '', '語調': '', '100LS': '', '20LS': '' }, sentences: [{ textForAudio: "Rain, rain, go away.", image: "", audios: { '博士': '', '大蒨': '', '慢速': '', '分解': '', '翻譯': '', '語調': '', '100LS': '', '20LS': '' } }] },
+                    { id: 2, title: "1-2 仰問星星間｜Twinkle, twinkle, little star", songImage: "", songAudios: { '博士': '', '大蒨': '', '慢速': '', '分解': '', '翻譯': '', '語調': '', '100LS': '', '20LS': '' }, sentences: [] },
+                    { id: 3, title: "1-3 萬物皆入詩｜Roses are red", songImage: "", songAudios: { '博士': '', '大蒨': '', '慢速': '', '分解': '', '翻譯': '', '語調': '', '100LS': '', '20LS': '' }, sentences: [] },
+                    { id: 4, title: "1-4 抱願入好眠｜Star light star bright", songImage: "", songAudios: { '博士': '', '大蒨': '', '慢速': '', '分解': '', '翻譯': '', '語調': '', '100LS': '', '20LS': '' }, sentences: [] },
+                    { id: 5, title: "1-5 聽說聽話好｜Teddy bear, teddy bear, turn around", songImage: "", songAudios: { '博士': '', '大蒨': '', '慢速': '', '分解': '', '翻譯': '', '語調': '', '100LS': '', '20LS': '' }, sentences: [] },
+                    { id: 6, title: "1-6 劣鎖靠良鑰｜I'm gold lock; I'm gold key", songImage: "", songAudios: { '博士': '', '大蒨': '', '慢速': '', '分解': '', '翻譯': '', '語調': '', '100LS': '', '20LS': '' }, sentences: [] },
+                    { id: 7, title: "1-7 騎牆才怕跌｜Humpty Dumpty sat on a wall", songImage: "", songAudios: { '博士': '', '大蒨': '', '慢速': '', '分解': '', '翻譯': '', '語調': '', '100LS': '', '20LS': '' }, sentences: [] },
+                    { id: 8, title: "1-8 人熟蟲不咬｜Good night; sleep tight", songImage: "", songAudios: { '博士': '', '大蒨': '', '慢速': '', '分解': '', '翻譯': '', '語調': '', '100LS': '', '20LS': '' }, sentences: [] },
+                    { id: 9, title: "1-9 羊毛天雪來｜Mary had little lamb", songImage: "", songAudios: { '博士': '', '大蒨': '', '慢速': '', '分解': '', '翻譯': '', '語調': '', '100LS': '', '20LS': '' }, sentences: [] },
+                    { id: 10, title: "1-10 代代載滿袋｜Baa, baa, black sheep", songImage: "", songAudios: { '博士': '', '大蒨': '', '慢速': '', '分解': '', '翻譯': '', '語調': '', '100LS': '', '20LS': '' }, sentences: [] },
+                    { id: 11, title: "1-11 搖籃掛樹梢｜Rock-a-bye baby", songImage: "", songAudios: { '博士': '', '大蒨': '', '慢速': '', '分解': '', '翻譯': '', '語調': '', '100LS': '', '20LS': '' }, sentences: [] },
+                    { id: 12, title: "1-12 麻煩人何在｜Oh, have you seen muffin man?", songImage: "", songAudios: { '博士': '', '大蒨': '', '慢速': '', '分解': '', '翻譯': '', '語調': '', '100LS': '', '20LS': '' }, sentences: [] },
+                    { id: 13, title: "1-13 舟划人生夢｜Row, row, row your boat", songImage: "", songAudios: { '博士': '', '大蒨': '', '慢速': '', '分解': '', '翻譯': '', '語調': '', '100LS': '', '20LS': '' }, sentences: [] },
+                    { id: 14, title: "1-14 粉嫩花結果｜Apple day", songImage: "", songAudios: { '博士': '', '大蒨': '', '慢速': '', '分解': '', '翻譯': '', '語調': '', '100LS': '', '20LS': '' }, sentences: [] }
+                ]
+            },
+            {
+                volumeId: 2,
+                volumeTitle: "第二冊",
+                lessons: [
+                    { id: 15, title: "2-1 在下散人吾｜Me myself and I", songImage: '', songAudios: { '博士': '', '大蒨': '', '慢速': '', '分解': '', '翻譯': '', '語調': '', '100LS': '', '20LS': '' }, sentences: [] },
+                    { id: 16, title: "2-2 瓷杯陪茶壺｜I'm little teapot short and stout", songImage: '', songAudios: { '博士': '', '大蒨': '', '慢速': '', '分解': '', '翻譯': '', '語調': '', '100LS': '', '20LS': '' }, sentences: [] },
+                    { id: 17, title: "2-3 週間接週末｜How many days has my baby to play?", songImage: '', songAudios: { '博士': '', '大蒨': '', '慢速': '', '分解': '', '翻譯': '', '語調': '', '100LS': '', '20LS': '' }, sentences: [] },
+                    { id: 18, title: "2-4 一而再四五｜1, 2, buckle my shoe", songImage: '', songAudios: { '博士': '', '大蒨': '', '慢速': '', '分解': '', '翻譯': '', '語調': '', '100LS': '', '20LS': '' }, sentences: [] },
+                    { id: 19, title: "2-5 山腳老婦守｜There was old woman", songImage: '', songAudios: { '博士': '', '大蒨': '', '慢速': '', '分解': '', '翻譯': '', '語調': '', '100LS': '', '20LS': '' }, sentences: [] },
+                    { id: 20, title: "2-6 多名應叫我｜Elizabeth, Elspeth, Betsy, and Bess", songImage: '', songAudios: { '博士': '', '大蒨': '', '慢速': '', '分解': '', '翻譯': '', '語調': '', '100LS': '', '20LS': '' }, sentences: [] },
+                    { id: 21, title: "2-7 老鼠上鐘下｜Hickory, dickory, dock", songImage: '', songAudios: { '博士': '', '大蒨': '', '慢速': '', '分解': '', '翻譯': '', '語調': '', '100LS': '', '20LS': '' }, sentences: [] },
+                    { id: 22, title: "2-8 倫敦很難過｜London Bridge is falling down", songImage: '', songAudios: { '博士': '', '大蒨': '', '慢速': '', '分解': '', '翻譯': '', '語調': '', '100LS': '', '20LS': '' }, sentences: [] },
+                    { id: 23, title: "2-9 傑利好冒險｜Jerry Hall", songImage: '', songAudios: { '博士': '', '大蒨': '', '慢速': '', '分解': '', '翻譯': '', '語調': '', '100LS': '', '20LS': '' }, sentences: [] },
+                    { id: 24, title: "2-10 伸手諸不見｜This little piggy went to market", songImage: '', songAudios: { '博士': '', '大蒨': '', '慢速': '', '分解': '', '翻譯': '', '語調': '', '100LS': '', '20LS': '' }, sentences: [] },
+                    { id: 25, title: "2-11 躍跳無謂高｜Jack be nimble", songImage: '', songAudios: { '博士': '', '大蒨': '', '慢速': '', '分解': '', '翻譯': '', '語調': '', '100LS': '', '20LS': '' }, sentences: [] },
+                    { id: 26, title: "2-12 生死彈指間｜One, two, three, four, five", songImage: '', songAudios: { '博士': '', '大蒨': '', '慢速': '', '分解': '', '翻譯': '', '語調': '', '100LS': '', '20LS': '' }, sentences: [] },
+                    { id: 27, title: "2-13 神佑月佑我｜I see moon", songImage: '', songAudios: { '博士': '', '大蒨': '', '慢速': '', '分解': '', '翻譯': '', '語調': '', '100LS': '', '20LS': '' }, sentences: [] },
+                    { id: 28, title: "2-14 耶誕夜金鉤｜Jingle Bells, Jingle Bells!", songImage: '', songAudios: { '博士': '', '大蒨': '', '慢速': '', '分解': '', '翻譯': '', '語調': '', '100LS': '', '20LS': '' }, sentences: [] }
+                ]
+            },
+            {
+                volumeId: 3,
+                volumeTitle: "第三冊",
+                lessons: [
+                    { id: 29, title: "3-1 印地安有十｜One little, two little, three little Indians", songImage: '', songAudios: { '博士': '', '大蒨': '', '慢速': '', '分解': '', '翻譯': '', '語調': '', '100LS': '', '20LS': '' }, sentences: [] },
+                    { id: 30, title: "3-2 瞎老鼠三隻｜Three blind mice", songImage: '', songAudios: { '博士': '', '大蒨': '', '慢速': '', '分解': '', '翻譯': '', '語調': '', '100LS': '', '20LS': '' }, sentences: [] },
+                    { id: 31, title: "3-3 飛天豬一頭｜Dickery, dickery, dare", songImage: '', songAudios: { '博士': '', '大蒨': '', '慢速': '', '分解': '', '翻譯': '', '語調': '', '100LS': '', '20LS': '' }, sentences: [] },
+                    { id: 32, title: "3-4 實吃也渴死｜If all the world was apple pie", songImage: '', songAudios: { '博士': '', '大蒨': '', '慢速': '', '分解': '', '翻譯': '', '語調': '', '100LS': '', '20LS': '' }, sentences: [] },
+                    { id: 33, title: "3-5 修養休廢笑｜If you are to be gentleman", songImage: '', songAudios: { '博士': '', '大蒨': '', '慢速': '', '分解': '', '翻譯': '', '語調': '', '100LS': '', '20LS': '' }, sentences: [] },
+                    { id: 34, title: "3-6 有耳無嘴梟｜A wise old owl sat in oak", songImage: '', songAudios: { '博士': '', '大蒨': '', '慢速': '', '分解': '', '翻譯': '', '語調': '', '100LS': '', '20LS': '' }, sentences: [] },
+                    { id: 35, title: "3-7 派伯頻跑拍｜Peter Piper picked peck of pickled pepper", songImage: '', songAudios: { '博士': '', '大蒨': '', '慢速': '', '分解': '', '翻譯': '', '語調': '', '100LS': '', '20LS': '' }, sentences: [] },
+                    { id: 36, title: "3-8 南瓜藏妻好｜Peter, Peter, pumpkin eater", songImage: '', songAudios: { '博士': '', '大蒨': '', '慢速': '', '分解': '', '翻譯': '', '語調': '', '100LS': '', '20LS': '' }, sentences: [] },
+                    { id: 37, title: "3-9 井深不窺天｜As round as apple, as deep as cup", songImage: '', songAudios: { '博士': '', '大蒨': '', '慢速': '', '分解': '', '翻譯': '', '語調': '', '100LS': '', '20LS': '' }, sentences: [] },
+                    { id: 38, title: "3-10 千里共枕眠｜The man in moon", songImage: '', songAudios: { '博士': '', '大蒨': '', '慢速': '', '分解': '', '翻譯': '', '語調': '', '100LS': '', '20LS': '' }, sentences: [] },
+                    { id: 39, title: "3-11 御賜金鑽鞋｜Little girl, little girl, where have you been?", songImage: '', songAudios: { '博士': '', '大蒨': '', '慢速': '', '分解': '', '翻譯': '', '語調': '', '100LS': '', '20LS': '' }, sentences: [] },
+                    { id: 40, title: "3-12 巴別人不遠｜How many miles is it to Babylon?", songImage: '', songAudios: { '博士': '', '大蒨': '', '慢速': '', '分解': '', '翻譯': '', '語調': '', '100LS': '', '20LS': '' }, sentences: [] },
+                    { id: 41, title: "3-13 首尾既呼應｜See, see! What shall I see?", songImage: '', songAudios: { '博士': '', '大蒨': '', '慢速': '', '分解': '', '翻譯': '', '語調': '', '100LS': '', '20LS': '' }, sentences: [] },
+                    { id: 42, title: "3-14 鼓掌手同心｜If you're happy and you know it clap your hands!", songImage: '', songAudios: { '博士': '', '大蒨': '', '慢速': '', '分解': '', '翻譯': '', '語調': '', '100LS': '', '20LS': '' }, sentences: [] }
+                ]
+            }
+        ];
+    }
+
+    // 初始化與 localStorage 讀取
+    const STORAGE_KEY = 'nursery_rhymes_volumes_data_v2';
+    let volumesData = [];
+
+    function loadData() {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+            try {
+                volumesData = JSON.parse(saved);
+            } catch (e) {
+                console.error("解析 LocalStorage 失敗，改用預設資料", e);
+                volumesData = getDefaultVolumesData();
+            }
+        } else {
+            volumesData = getDefaultVolumesData();
+        }
+    }
+
+    function saveData() {
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(volumesData));
+        } catch (e) {
+            console.error("LocalStorage 儲存失敗", e);
+            alert("儲存失敗：可能是上傳的圖片或音檔總容量過大，超過瀏覽器限制（通常約 5MB）。建議壓縮圖片或使用較短的音檔。");
+        }
+    }
+
+    function resetLocalStorageData() {
+        if (confirm("確定要重設所有自訂資料並恢復預設狀態嗎？這將清除所有已上傳的圖片與音檔。")) {
+            localStorage.removeItem(STORAGE_KEY);
+            loadData();
+            currentActiveLessonId = 1;
+            openVolumeId = 1;
+            renderSidebar();
+            loadCurrentLesson();
+            alert("已成功重設為預設資料！");
+        }
+    }
+
+    let currentActiveLessonId = 1;
+    let openVolumeId = 1;
+
+    const volumeListEl = document.getElementById('volumeList');
+
+    function renderSidebar() {
+        volumeListEl.innerHTML = '';
+        volumesData.forEach(vol => {
+            const isOpen = vol.volumeId === openVolumeId;
+            const groupDiv = document.createElement('div');
+            groupDiv.className = `volume-group ${isOpen ? 'open' : ''}`;
+
+            const toggleBtn = document.createElement('button');
+            toggleBtn.className = 'volume-toggle';
+            toggleBtn.innerHTML = `<span>${vol.volumeTitle}</span><span class="arrow">▶</span>`;
+            toggleBtn.onclick = () => {
+                openVolumeId = openVolumeId === vol.volumeId ? null : vol.volumeId;
+                renderSidebar();
+            };
+            groupDiv.appendChild(toggleBtn);
+
+            const sublistDiv = document.createElement('div');
+            sublistDiv.className = 'lesson-sublist';
+
+            vol.lessons.forEach(lesson => {
+                const item = document.createElement('div');
+                item.className = `lesson-item ${lesson.id === currentActiveLessonId ? 'active' : ''}`;
+                item.innerHTML = `<span>${lesson.title}</span>`;
+                item.onclick = (e) => {
+                    e.stopPropagation();
+                    currentActiveLessonId = lesson.id;
+                    openVolumeId = vol.volumeId;
+                    loadCurrentLesson();
+                    renderSidebar();
+                };
+                sublistDiv.appendChild(item);
             });
 
-            songDiv.appendChild(pageList);
-            container.appendChild(songDiv);
-          }
+            groupDiv.appendChild(sublistDiv);
+            volumeListEl.appendChild(groupDiv);
         });
-      };
     }
 
-    function resetAllButtons() {
-      for (let type in originalBtnTexts) {
-        const btn = document.getElementById(`btn-${type}`);
-        if (btn) {
-          btn.textContent = originalBtnTexts[type];
-          btn.classList.remove('playing');
+    function getCurrentLessonInfo() {
+        for (let vol of volumesData) {
+            for (let lesson of vol.lessons) {
+                if (lesson.id === currentActiveLessonId) {
+                    return { lesson, volumeId: vol.volumeId, volumeTitle: vol.volumeTitle, volumeObj: vol };
+                }
+            }
         }
-      }
+        return { lesson: volumesData[0].lessons[0], volumeId: 1, volumeTitle: "第一冊", volumeObj: volumesData[0] };
     }
 
-    function selectPage(item) {
-      if (activeAudioObj) {
-        activeAudioObj.pause();
-        activeAudioObj = null;
-      }
-      resetAllButtons();
-
-      currentActiveData = item;
-      document.getElementById('current-title').textContent = `${item.songName} - ${item.pageName}`;
-
-      const zhTitleEl = document.getElementById('display-chinese-title');
-      if (item.songChinese) {
-        zhTitleEl.textContent = `中文翻譯：${item.songChinese}`;
-        zhTitleEl.style.display = 'inline-block';
-      } else {
-        zhTitleEl.style.display = 'none';
-      }
-
-      if (item.imageBlob) {
-        const imgEl = document.getElementById('display-image');
-        imgEl.src = URL.createObjectURL(item.imageBlob);
-        imgEl.style.display = 'block';
-      }
-
-      document.getElementById('audio-section').style.display = 'block';
+    function updateLessonDropdownOptions(currentVolObj, selectedLessonId) {
+        const lessonSelect = document.getElementById('lessonSelect');
+        lessonSelect.innerHTML = '';
+        currentVolObj.lessons.forEach(l => {
+            const opt = document.createElement('option');
+            opt.value = l.id;
+            opt.textContent = l.title;
+            if (l.id === selectedLessonId) {
+                opt.selected = true;
+            }
+            lessonSelect.appendChild(opt);
+        });
     }
 
-    function playAudio(type, btnEl) {
-      if (!currentActiveData) return;
+    function switchLessonById(lessonId) {
+        currentActiveLessonId = parseInt(lessonId);
+        loadCurrentLesson();
+        renderSidebar();
+    }
 
-      if (activeAudioType === type && activeAudioObj) {
-        if (activeAudioObj.paused) {
-          activeAudioObj.play();
-          btnEl.textContent = `⏸️ 暫停 (${originalBtnTexts[type]})`;
-          btnEl.classList.add('playing');
+    function loadCurrentLesson() {
+        const { lesson, volumeId, volumeTitle, volumeObj } = getCurrentLessonInfo();
+        
+        document.getElementById('currentTitle').innerText = lesson.title;
+        document.getElementById('currentBadge').innerText = volumeTitle;
+
+        document.getElementById('bookSelect').value = volumeId;
+        updateLessonDropdownOptions(volumeObj, lesson.id);
+        document.getElementById('lessonTitleInput').value = lesson.title;
+
+        const songPreviewContainer = document.getElementById('songImagePreviewContainer');
+        songPreviewContainer.innerHTML = lesson.songImage ? `<img src="${lesson.songImage}" class="preview-img">` : '<span style="font-size:0.8rem; color:#888;">(尚未上傳童謠開心門圖片)</span>';
+
+        renderSongTracks();
+        renderSentences();
+        updateUploadUI();
+    }
+
+    function switchVolume(newVolumeId) {
+        newVolumeId = parseInt(newVolumeId);
+        const targetVol = volumesData.find(v => v.volumeId === newVolumeId);
+        if (!targetVol || !targetVol.lessons.length) return;
+
+        currentActiveLessonId = targetVol.lessons[0].id;
+        openVolumeId = newVolumeId;
+        loadCurrentLesson();
+        renderSidebar();
+    }
+
+    function updateLessonTitle(newTitle) {
+        if (!isAdmin) {
+            loadCurrentLesson();
+            return;
+        }
+        const { lesson } = getCurrentLessonInfo();
+        lesson.title = newTitle;
+        document.getElementById('currentTitle').innerText = lesson.title;
+        const { volumeObj } = getCurrentLessonInfo();
+        updateLessonDropdownOptions(volumeObj, lesson.id);
+        renderSidebar();
+        saveData();
+    }
+
+    function handleSongImageUpload(event) {
+        if (!isAdmin) return;
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const { lesson } = getCurrentLessonInfo();
+                lesson.songImage = e.target.result;
+                loadCurrentLesson();
+                saveData();
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    function renderSongTracks() {
+        const { lesson } = getCurrentLessonInfo();
+        const container = document.getElementById('songTracksContainer');
+
+        const tracks = [
+            { name: '博士', icon: '👨‍🏫' },
+            { name: '大蒨', icon: '👩‍🎓' },
+            { name: '慢速', icon: '🐢' },
+            { name: '分解', icon: '⚙️' },
+            { name: '翻譯', icon: '🌐' },
+            { name: '語調', icon: '📈' },
+            { name: '100LS', icon: '🎧' },
+            { name: '20LS', icon: '🎙️' }
+        ];
+
+        container.innerHTML = '';
+        tracks.forEach(t => {
+            const hasAudio = Boolean(lesson.songAudios[t.name]);
+            const btn = document.createElement('button');
+            btn.className = `track-btn ${hasAudio ? '' : 'no-audio'}`;
+            btn.innerHTML = `${t.icon} ${t.name}`;
+            btn.title = hasAudio ? `播放 ${t.name}` : `上傳 ${t.name} 音檔`;
+
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'file';
+            hiddenInput.accept = 'audio/*';
+            hiddenInput.style.display = 'none';
+            hiddenInput.onchange = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = function(uploadEvent) {
+                        lesson.songAudios[t.name] = uploadEvent.target.result;
+                        renderSongTracks();
+                        saveData();
+                    };
+                    reader.readAsDataURL(file);
+                }
+                e.target.value = '';
+            };
+
+            btn.onclick = () => {
+                if (hasAudio) {
+                    playAudio(lesson.songAudios[t.name], lesson.title, t.name);
+                } else if (isAdmin) {
+                    hiddenInput.click();
+                }
+            };
+            
+            btn.oncontextmenu = (e) => {
+                e.preventDefault();
+                hiddenInput.click();
+            };
+
+            container.appendChild(btn);
+            container.appendChild(hiddenInput);
+        });
+    }
+
+    function renderSentences() {
+        const container = document.getElementById('sentencesContainer');
+        container.innerHTML = '';
+        const { lesson } = getCurrentLessonInfo();
+
+        lesson.sentences.forEach((s, idx) => {
+            const tracks = [
+                { name: '博士', icon: '👨‍🏫' },
+                { name: '大蒨', icon: '👩‍🎓' },
+                { name: '慢速', icon: '🐢' },
+                { name: '分解', icon: '⚙️' },
+                { name: '翻譯', icon: '🌐' },
+                { name: '語調', icon: '📈' },
+                { name: '100LS', icon: '🎧' },
+                { name: '20LS', icon: '🎙️' }
+            ];
+
+            let tracksHtml = '';
+            tracks.forEach(t => {
+                const hasAudio = Boolean(s.audios[t.name]);
+                tracksHtml += `
+                    <button class="track-btn ${hasAudio ? '' : 'no-audio'}" title="${hasAudio ? '點擊播放' : '點擊上傳音檔'}" onclick="handleSentenceClick(${idx}, '${t.name}', '${s.textForAudio.replace(/'/g, "\'")}')" oncontextmenu="event.preventDefault(); document.getElementById('sentence_audio_${idx}_${t.name}').click()">
+                        ${t.icon} ${t.name}
+                    </button>
+                    <input type="file" id="sentence_audio_${idx}_${t.name}" accept="audio/*" style="display: none;" onchange="handleSentenceUpload(event, ${idx}, '${t.name}')">
+                `;
+            });
+
+            const card = document.createElement('div');
+            card.className = 'sentence-card';
+            card.innerHTML = `
+                <div class="sentence-header">
+                    <div class="sentence-title">句子 ${idx + 1}</div>
+                    <button class="delete-sentence-btn" style="display:${isAdmin ? '' : 'none'}" onclick="deleteSentence(${idx})">🗑️ 刪除此句</button>
+                </div>
+                <div class="upload-panel" onclick="if (isAdmin) document.getElementById('sentenceImageInput_${idx}').click()" style="padding: 10px; margin-bottom: 10px;">
+                    <span style="font-size:0.85rem;">點擊上傳本句圖片</span>
+                    <input type="file" id="sentenceImageInput_${idx}" accept="image/*" ${isAdmin ? '' : 'disabled'} onchange="handleSentenceImageUpload(event, ${idx})">
+                    ${s.image ? `<img src="${s.image}" class="preview-img" style="max-height: 300px;">` : '<div style="font-size:0.75rem; color:#888;">(無圖片)</div>'}
+                </div>
+                <div style="font-size: 0.85rem; color: #555; margin-top: 6px; font-weight: 600;">本句音檔（點擊播放，未上傳時點擊可直接上傳）：</div>
+                <div style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px;">
+                    ${tracksHtml}
+                </div>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    function handleSentenceClick(sentenceIndex, trackName, fallbackText) {
+        const { lesson } = getCurrentLessonInfo();
+        const audioUrl = lesson.sentences[sentenceIndex].audios[trackName];
+        if (audioUrl) {
+            playAudio(audioUrl, fallbackText, trackName);
+        } else if (isAdmin) {
+            document.getElementById(`sentence_audio_${sentenceIndex}_${trackName}`).click();
+        }
+    }
+
+    function handleSentenceUpload(event, sentenceIndex, trackName) {
+        if (!isAdmin) return;
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(uploadEvent) {
+                const { lesson } = getCurrentLessonInfo();
+                lesson.sentences[sentenceIndex].audios[trackName] = uploadEvent.target.result;
+                renderSentences();
+                saveData();
+            };
+            reader.readAsDataURL(file);
+        }
+        event.target.value = '';
+    }
+
+    function handleSentenceImageUpload(event, index) {
+        if (!isAdmin) return;
+        const file = event.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const { lesson } = getCurrentLessonInfo();
+                lesson.sentences[index].image = e.target.result;
+                loadCurrentLesson();
+                saveData();
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    function addNewSentence() {
+        if (!isAdmin) return;
+        const { lesson } = getCurrentLessonInfo();
+        lesson.sentences.push({
+            textForAudio: "New sentence practice.",
+            image: "",
+            audios: { '博士': '', '大蒨': '', '慢速': '', '分解': '', '翻譯': '', '語調': '', '100LS': '', '20LS': '' }
+        });
+        loadCurrentLesson();
+        saveData();
+    }
+
+    function deleteSentence(index) {
+        if (!isAdmin) return;
+        if (confirm("確定要刪除這句嗎？")) {
+            const { lesson } = getCurrentLessonInfo();
+            lesson.sentences.splice(index, 1);
+            loadCurrentLesson();
+            saveData();
+        }
+    }
+
+    function playAudio(audioUrl, fallbackText, trackName) {
+        if (audioUrl) {
+            const audio = new Audio(audioUrl);
+            audio.play().catch(e => console.log(e));
         } else {
-          activeAudioObj.pause();
-          btnEl.textContent = `▶️ 繼續 (${originalBtnTexts[type]})`;
-          btnEl.classList.remove('playing');
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel();
+                const utterance = new SpeechSynthesisUtterance(fallbackText);
+                utterance.lang = trackName === '翻譯' ? 'zh-TW' : 'en-US';
+                if (trackName === '慢速') utterance.rate = 0.6;
+                else if (trackName === '分解') utterance.rate = 0.5;
+                else utterance.rate = 0.9;
+                
+                window.speechSynthesis.speak(utterance);
+            } else {
+                alert('您的瀏覽器不支援語音播放。');
+            }
         }
-        return;
-      }
-
-      if (activeAudioObj) {
-        activeAudioObj.pause();
-      }
-      resetAllButtons();
-
-      const blob = currentActiveData[`audio_${type}`];
-      if (!blob) {
-        alert("此類別尚未上傳音檔！");
-        return;
-      }
-
-      const audioUrl = URL.createObjectURL(blob);
-      activeAudioObj = new Audio(audioUrl);
-      activeAudioType = type;
-      activeBtnElement = btnEl;
-
-      activeAudioObj.play();
-      btnEl.textContent = `⏸️ 暫停 (${originalBtnTexts[type]})`;
-      btnEl.classList.add('playing');
-
-      activeAudioObj.onended = () => {
-        btnEl.textContent = originalBtnTexts[type];
-        btnEl.classList.remove('playing');
-        activeAudioObj = null;
-        activeAudioType = null;
-      };
     }
 
-    async function saveData() {
-      const volume = document.getElementById('adm-volume').value;
-      const songName = document.getElementById('adm-song-name').value.trim();
-      const songChinese = document.getElementById('adm-song-chinese').value.trim();
-      const pageName = document.getElementById('adm-page-name').value.trim();
+    // 初始化執行
+    loadData();
+    renderSidebar();
+    loadCurrentLesson();
+    updatePermissionUI();
+</script>
 
-      if (!songName || !pageName) {
-        alert("請輸入童謠名稱與頁數！");
-        return;
-      }
-
-      const imgFile = document.getElementById('adm-img-file').files[0];
-      const drFile = document.getElementById('adm-audio-dr').files[0];
-      const chienFile = document.getElementById('adm-audio-chien').files[0];
-      const zhFile = document.getElementById('adm-audio-zh').files[0];
-      const fullDrFile = document.getElementById('adm-full-dr').files[0];
-      const fullChienFile = document.getElementById('adm-full-chien').files[0];
-      const fullZhFile = document.getElementById('adm-full-zh').files[0];
-
-      const record = {
-        id: `${volume}_${songName}_${pageName}`,
-        volume: volume,
-        songName: songName,
-        songChinese: songChinese,
-        pageName: pageName,
-        imageBlob: imgFile || null,
-        audio_dr: drFile || null,
-        audio_chien: chienFile || null,
-        audio_zh: zhFile || null,
-        audio_full_dr: fullDrFile || null,
-        audio_full_chien: fullChienFile || null,
-        audio_full_zh: fullZhFile || null
-      };
-
-      const tx = db.transaction("rhymes", "readwrite");
-      const store = tx.objectStore("rhymes");
-      store.put(record);
-
-      tx.oncomplete = () => {
-        alert("儲存成功！");
-        loadSidebarTree();
-        switchMode('front');
-      };
-    }
-  </script>
 </body>
 </html>
